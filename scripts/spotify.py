@@ -808,6 +808,7 @@ def print_help():
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 USAGE:
+    spotify                       Show currently playing track
     spotify <command> [options]
 
 COMMANDS:
@@ -852,6 +853,7 @@ OPTIONS:
     --version, -v                Show version information
 
 EXAMPLES:
+    spotify                               # Show currently playing track
     spotify play "daft punk"              # Search & play track
     spotify play --playlist "Happy Rock"  # Play playlist
     spotify queue view                    # Show queue
@@ -885,8 +887,17 @@ def main():
     auth = SpotifyAuth()
     api = SpotifyAPI()
     
-    # Check for help/version FIRST (before any other logic)
-    if len(sys.argv) < 2 or sys.argv[1] in ["--help", "-h", "help"]:
+    # No arguments: show currently playing track
+    if len(sys.argv) < 2:
+        try:
+            print(api.now_playing_detailed())
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            sys.exit(1)
+        sys.exit(0)
+    
+    # Help/Version flags
+    if sys.argv[1] in ["--help", "-h", "help"]:
         print_help()
         sys.exit(0)
     
