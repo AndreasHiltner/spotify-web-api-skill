@@ -15,6 +15,9 @@ metadata:
   commands:
     - spotify auth
     - spotify now
+    - spotify cover
+    - spotify lyrics
+    - spotify queue [view|add <uri>]
     - spotify play [query]
     - spotify play --playlist <name>
     - spotify pause
@@ -77,12 +80,16 @@ spotify devices          # List devices
 | `spotify next` | Skip to next track |
 | `spotify prev` | Go to previous track |
 | `spotify volume <0-100>` | Set volume percentage |
+| `spotify queue view` | Show current playback queue |
+| `spotify queue add <uri>` | Add track to queue |
 
-### Information
+### Information & Media
 
 | Command | Description |
 |---------|-------------|
-| `spotify now` | Show currently playing track |
+| `spotify now` | Currently playing (with progress bar) |
+| `spotify cover` | Show album cover art |
+| `spotify lyrics` | Get lyrics for current track |
 | `spotify devices` | List available Spotify Connect devices |
 | `spotify playlists [limit]` | Show your library playlists |
 | `spotify recent [n]` | Recently played tracks (default: 10) |

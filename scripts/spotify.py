@@ -48,7 +48,8 @@ class SpotifyAuth:
             "user-library-modify",
             "user-read-recently-played",
             "user-top-read",
-            "user-read-playback-position"
+            "user-read-playback-position",
+            "user-read-queue"
         ])
     
     def get_auth_url(self):
@@ -626,6 +627,153 @@ class SpotifyAPI:
         
         return "\n".join(lines)
     
+    def queue(self, action=None, uri=None):
+        """Manage playback queue"""
+        devices = self.devices(raw=True)
+        if not devices:
+            return "❌ No active Spotify devices found"
+        
+        device_id = None
+        active_devices = [d for d in devices if d.get("is_active")]
+        if active_devices:
+            device_id = active_devices[0]["id"]
+        
+        if action == "add" and uri:
+            # Add track to queue
+            try:
+                self._request("POST", f"/me/player/queue?uri={urllib.parse.quote(uri)}&device_id={device_id}", allow_empty=True)
+                return f"➕ Added to queue"
+            except:
+                self._request("POST", f"/me/player/queue?uri={urllib.parse.quote(uri)}", allow_empty=True)
+                return f"➕ Added to queue"
+        
+        elif action == "view":
+            # Get current queue
+            result = self._request("GET", "/me/player/queue")
+            if not result:
+                return "📭 Queue is empty"
+            
+            currently_playing = result.get("currently_playing")
+            queue = result.get("queue", [])
+            
+            lines = ["🎵 Queue:"]
+            if currently_playing:
+                artists = ", ".join([a["name"] for a in currently_playing.get("artists", [])])
+                lines.append(f"   ▶️ NOW: {artists} - {currently_playing['name']}")
+            
+            if queue:
+                lines.append(f"   Up next ({len(queue)} tracks):")
+                for i, track in enumerate(queue[:5], 1):  # Show first 5
+                    artists = ", ".join([a["name"] for a in track.get("artists", [])])
+                    lines.append(f"      {i}. {artists} - {track['name']}")
+                if len(queue) > 5:
+                    lines.append(f"      ... and {len(queue) - 5} more")
+            else:
+                lines.append("   (No tracks queued)")
+            
+            return "\n".join(lines)
+        
+        return "Usage: spotify queue [view|add <uri>]"
+    
+    def now_playing_detailed(self):
+        """Get currently playing track with album art and details"""
+        result = self._request("GET", "/me/player/currently-playing", allow_empty=True)
+        if not result or not result.get("item"):
+            return "⏸️  Nothing is currently playing"
+        
+        item = result["item"]
+        artists = ", ".join([a["name"] for a in item["artists"]])
+        album = item.get("album", {})
+        album_name = album.get("name", "Unknown Album")
+        
+        # Get album art
+        images = album.get("images", [])
+        album_art = ""
+        if images:
+            # Get largest image
+            largest = max(images, key=lambda x: x.get("width", 0))
+            album_art = f"\n🖼️  Album Art: {largest['url']}"
+        
+        # Get playback progress
+        progress_ms = result.get("progress_ms", 0)
+        duration_ms = item.get("duration_ms", 0)
+        progress_sec = progress_ms // 1000
+        duration_sec = duration_ms // 1000
+        
+        progress_bar = self._format_progress(progress_sec, duration_sec)
+        
+        return f"""🎵 {artists} - {item['name']}
+💿 {album_name}{album_art}
+⏱️  {progress_bar} {self._format_time(progress_sec)} / {self._format_time(duration_sec)}"""
+    
+    def _format_progress(self, current, total):
+        """Create a progress bar"""
+        if total == 0:
+            return "[--:--/--:--]"
+        
+        bar_length = 20
+        filled = int(bar_length * current / total)
+        bar = "█" * filled + "░" * (bar_length - filled)
+        return f"[{bar}]"
+    
+    def _format_time(self, seconds):
+        """Format seconds as mm:ss"""
+        mins = seconds // 60
+        secs = seconds % 60
+        return f"{mins}:{secs:02d}"
+    
+    def get_lyrics(self):
+        """Get lyrics for currently playing track (via Spotify lyrics API)"""
+        result = self._request("GET", "/me/player/currently-playing", allow_empty=True)
+        if not result or not result.get("item"):
+            return "⏸️  Nothing is currently playing"
+        
+        item = result["item"]
+        track_id = item.get("id")
+        track_name = item.get("name", "Unknown")
+        artists = ", ".join([a["name"] for a in item.get("artists", [])])
+        
+        if not track_id:
+            return f"📝 Lyrics for '{track_name}' by {artists}\n⚠️  Track ID not available"
+        
+        # Try Spotify's lyrics endpoint (beta/unofficial)
+        token = self.auth.get_access_token()
+        url = f"https://api.spotify.com/v1/tracks/{track_id}/lyrics"
+        
+        req = urllib.request.Request(url, method='GET')
+        req.add_header("Authorization", f"Bearer {token}")
+        
+        try:
+            with urllib.request.urlopen(req) as response:
+                lyrics_data = json.loads(response.read().decode())
+                
+                lyrics = lyrics_data.get("lyrics", {})
+                lines = lyrics.get("lines", [])
+                
+                if not lines:
+                    return f"📝 {artists} - {track_name}\n⚠️  No lyrics available"
+                
+                output = [f"📝 {artists} - {track_name}\n"]
+                for line in lines[:20]:  # Show first 20 lines
+                    text = line.get("words", {}).get("text", "")
+                    if text:
+                        output.append(f"   {text}")
+                
+                if len(lines) > 20:
+                    output.append(f"\n   ... ({len(lines) - 20} more lines)")
+                
+                return "\n".join(output)
+                
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return f"📝 {artists} - {track_name}\n⚠️  Lyrics not available for this track"
+            elif e.code == 403:
+                return f"📝 {artists} - {track_name}\n⚠️  Lyrics feature not available in your region"
+            else:
+                return f"📝 {artists} - {track_name}\n⚠️  Could not fetch lyrics (Error {e.code})"
+        except Exception as e:
+            return f"📝 {artists} - {track_name}\n⚠️  Error: {e}"
+    
     def my_playlists(self, limit=20):
         """Get user's saved/followed playlists"""
         result = self._request("GET", f"/me/playlists?limit={limit}")
@@ -660,6 +808,9 @@ def main():
         print("Usage:")
         print("  spotify.py auth              - Authenticate with Spotify")
         print("  spotify.py now               - Show currently playing track")
+        print("  spotify.py cover             - Show album cover for current track")
+        print("  spotify.py lyrics            - Get lyrics for current track")
+        print("  spotify.py queue [view|add <uri>] - Manage playback queue")
         print("  spotify.py recent [limit]    - Show recently played tracks")
         print("  spotify.py top tracks [period] - Show top tracks")
         print("  spotify.py top artists [period] - Show top artists")
@@ -671,6 +822,7 @@ def main():
         print("  spotify.py search <query> [type] - Search (track, playlist, artist)")
         print("  spotify.py devices           - List available devices")
         print("  spotify.py playlists [limit] - Show your library playlists")
+        print("  spotify.py volume <percent>  - Set volume")
         print()
         print("Period options: short_term (4w), medium_term (6m), long_term (all time)")
         return
@@ -681,7 +833,22 @@ def main():
         if cmd == "auth":
             auth.authenticate()
         elif cmd == "now":
-            print(api.now_playing())
+            print(api.now_playing_detailed())
+        elif cmd == "cover":
+            print(api.now_playing_detailed())
+        elif cmd == "lyrics":
+            print(api.get_lyrics())
+        elif cmd == "queue":
+            if len(sys.argv) > 2:
+                if sys.argv[2] == "add" and len(sys.argv) > 3:
+                    uri = sys.argv[3]
+                    print(api.queue("add", uri))
+                elif sys.argv[2] == "view":
+                    print(api.queue("view"))
+                else:
+                    print("Usage: spotify.py queue [view|add <spotify:uri>]")
+            else:
+                print(api.queue("view"))
         elif cmd == "recent":
             limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
             print(api.recent_tracks(limit))

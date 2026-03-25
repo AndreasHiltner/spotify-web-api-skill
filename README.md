@@ -5,11 +5,15 @@ Control Spotify playback across all your devices (Alexa, Desktop, Mobile) direct
 ## Features
 
 - ✅ **Playback Control**: Play, pause, skip, previous track
+- ✅ **Queue Management**: View and add tracks to queue
+- ✅ **Album Art**: Display cover art for current track
+- ✅ **Lyrics**: Fetch lyrics for currently playing song
 - ✅ **Device Management**: List and control all Spotify Connect devices
 - ✅ **Playlist Support**: Play playlists, albums, artists by name
 - ✅ **Search**: Find tracks, playlists, artists
 - ✅ **Volume Control**: Set volume per device
 - ✅ **Library Access**: View your playlists, recent tracks, top tracks/artists
+- ✅ **Progress Bar**: Visual playback progress
 - ✅ **Cross-Platform**: Works on Linux, macOS, Windows (no Mac-only dependencies)
 
 ## Requirements
@@ -79,8 +83,14 @@ spotify next                           # Next track
 spotify prev                           # Previous track
 spotify volume 50                      # Set volume to 50%
 
-# Information
-spotify now                            # Currently playing
+# Queue management
+spotify queue view                     # Show current queue
+spotify queue add "spotify:track:..."  # Add track to queue
+
+# Information & Media
+spotify now                            # Currently playing (with progress)
+spotify cover                          # Show album cover art
+spotify lyrics                         # Get lyrics for current track
 spotify recent [10]                    # Recently played (default: 10)
 spotify devices                        # Available devices
 spotify playlists [20]                 # Your library playlists
