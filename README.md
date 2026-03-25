@@ -170,8 +170,16 @@ Token expired. Run `spotify auth` again to re-authenticate.
 ### "403 Forbidden"
 Your Spotify account might not have Premium, or the app wasn't approved for certain scopes.
 
+### "Lyrics not available"
+Lyrics availability depends on Spotify's licensing in your region and track-by-track availability. Not all songs have lyrics enabled.
+
 ### Redirect URI Error
 Make sure you use `http://127.0.0.1:8888/callback` (not `localhost`) in your Spotify Dashboard.
+
+## Known Limitations
+
+- **Lyrics**: Spotify's lyrics API is region-dependent and not available for all tracks
+- **Queue**: Only works when playback is active on a device
 
 ## Security
 
