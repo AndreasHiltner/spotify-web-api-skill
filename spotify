@@ -6,6 +6,12 @@ SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 CREDENTIALS_FILE="/srv/clawd-share/Andreas/Spotify.txt"
 
+# Pass through help/version flags directly
+if [[ "$1" == "--help" || "$1" == "-h" || "$1" == "--version" || "$1" == "-v" || "$1" == "help" ]]; then
+    python3 "$SCRIPT_DIR/scripts/spotify.py" "$@"
+    exit $?
+fi
+
 # Load credentials
 if [ -f "$CREDENTIALS_FILE" ]; then
     export SPOTIFY_CLIENT_ID=$(grep -A1 "Client ID" "$CREDENTIALS_FILE" | tail -1 | tr -d '[:space:]')

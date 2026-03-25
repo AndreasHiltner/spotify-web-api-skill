@@ -25,7 +25,11 @@ REDIRECT_URI = "http://127.0.0.1:8888/callback"
 CACHE_FILE = Path.home() / ".spotify_cache.json"
 PORT = 8888
 
-if not CLIENT_ID or not CLIENT_SECRET:
+# Check for help/version FIRST (before credential check)
+if len(sys.argv) < 2 or sys.argv[1] in ["--help", "-h", "help", "--version", "-v", "version"]:
+    # Will be handled in main()
+    pass
+elif not CLIENT_ID or not CLIENT_SECRET:
     print("❌ Error: SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET must be set")
     sys.exit(1)
 
@@ -797,35 +801,99 @@ class SpotifyAPI:
         return "\n".join(lines)
 
 
+def print_help():
+    """Print comprehensive help message"""
+    help_text = """
+🎵 Spotify Web API Controller
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+USAGE:
+    spotify <command> [options]
+
+COMMANDS:
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  🔐 Authentication
+    auth                         Authenticate with Spotify (one-time setup)
+
+  ▶️  Playback Control
+    play [query]                 Play/resume or search & play track
+    play --playlist <name>       Play a playlist by name
+    pause                        Pause current playback
+    next                         Skip to next track
+    prev                         Go to previous track
+    volume <0-100>               Set volume percentage
+
+  🎵 Queue Management
+    queue view                   Show current playback queue
+    queue add <uri>              Add track to queue (Spotify URI)
+
+  📊 Information & Media
+    now                          Show currently playing track (with progress)
+    cover                        Show album cover art URL
+    lyrics                       Get lyrics for current track
+    devices                      List available Spotify Connect devices
+    playlists [limit]            Show your library playlists (default: 20)
+    recent [n]                   Recently played tracks (default: 10)
+
+  🔍 Search
+    search <query> [type]        Search Spotify
+                                 Types: track (default), playlist, artist, album
+
+  📈 Statistics
+    top tracks [period]          Your top tracks
+    top artists [period]         Your top artists
+                                 Periods: short_term (4w), medium_term (6m), long_term (all time)
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OPTIONS:
+    --help, -h, help             Show this help message
+    --version, -v                Show version information
+
+EXAMPLES:
+    spotify play "daft punk"              # Search & play track
+    spotify play --playlist "Happy Rock"  # Play playlist
+    spotify queue view                    # Show queue
+    spotify volume 50                     # Set volume to 50%
+    spotify search "beatles" artist       # Search for artists
+    spotify top tracks short_term         # Top tracks (last 4 weeks)
+    spotify cover                         # Show album cover
+
+ENVIRONMENT:
+    SPOTIFY_CLIENT_ID                     Your Spotify Client ID
+    SPOTIFY_CLIENT_SECRET                 Your Spotify Client Secret
+    
+    Or store in: /srv/clawd-share/Andreas/Spotify.txt
+
+REQUIREMENTS:
+    - Spotify Premium account (for playback control)
+    - Spotify Developer Account (free, for API access)
+    - Python 3.8+
+
+GITHUB:
+    https://github.com/AndreasHiltner/spotify-web-api-skill
+
+VERSION:
+    1.1.0 (2026-03-25)
+"""
+    print(help_text)
+
+
 # Main CLI
 def main():
     auth = SpotifyAuth()
     api = SpotifyAPI()
     
-    if len(sys.argv) < 2:
-        print("Spotify Web API Controller")
-        print()
-        print("Usage:")
-        print("  spotify.py auth              - Authenticate with Spotify")
-        print("  spotify.py now               - Show currently playing track")
-        print("  spotify.py cover             - Show album cover for current track")
-        print("  spotify.py lyrics            - Get lyrics for current track")
-        print("  spotify.py queue [view|add <uri>] - Manage playback queue")
-        print("  spotify.py recent [limit]    - Show recently played tracks")
-        print("  spotify.py top tracks [period] - Show top tracks")
-        print("  spotify.py top artists [period] - Show top artists")
-        print("  spotify.py play [query]      - Play/resume or play specific track")
-        print("  spotify.py play --playlist <name> - Play a playlist")
-        print("  spotify.py pause             - Pause playback")
-        print("  spotify.py next              - Skip to next track")
-        print("  spotify.py prev              - Go to previous track")
-        print("  spotify.py search <query> [type] - Search (track, playlist, artist)")
-        print("  spotify.py devices           - List available devices")
-        print("  spotify.py playlists [limit] - Show your library playlists")
-        print("  spotify.py volume <percent>  - Set volume")
-        print()
-        print("Period options: short_term (4w), medium_term (6m), long_term (all time)")
-        return
+    # Check for help/version FIRST (before any other logic)
+    if len(sys.argv) < 2 or sys.argv[1] in ["--help", "-h", "help"]:
+        print_help()
+        sys.exit(0)
+    
+    if sys.argv[1] in ["--version", "-v", "version"]:
+        print("Spotify Web API Controller v1.1.0")
+        print("GitHub: https://github.com/AndreasHiltner/spotify-web-api-skill")
+        sys.exit(0)
     
     cmd = sys.argv[1]
     
