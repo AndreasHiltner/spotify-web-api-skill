@@ -1,0 +1,16 @@
+{
+  "name": "spotify-web-api-skill",
+  "version": "1.0.0",
+  "description": "Spotify Web API integration for OpenClaw - Control Spotify playback, playlists, and devices",
+  "author": "Andreas",
+  "license": "MIT",
+  "scripts": {
+    "test": "echo \"No tests specified\""
+  },
+  "keywords": [
+    "spotify",
+    "music",
+    "openclaw",
+    "skill"
+  ]
+}
