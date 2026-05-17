@@ -90,6 +90,7 @@ spotify play --all                     # Play on all devices (group playback)
 spotify play --playlist "Playlist Name" # Play playlist
 spotify play --playlist "Rock" --device "Kitchen"  # Playlist on specific device
 spotify pause                          # Pause
+spotify skip                           # Next track + show what's playing
 spotify next                           # Next track
 spotify prev                           # Previous track
 spotify volume 50                      # Set volume to 50%
@@ -157,6 +158,7 @@ This CLI integrates with any chatbot or voice assistant. Natural language comman
 "Play Daft Punk in the Kitchen" → spotify play --device "Kitchen" "daft punk"
 "Pause the music"              → spotify pause
 "Next track"                   → spotify next
+"Skip and show"                → spotify skip
 "Play playlist 'Happy Rock'"   → spotify play --playlist "Happy Rock"
 "Play 'Happy Rock' on Office"  → spotify play --playlist "Happy Rock" --device "Office"
 "Set volume to 30%"            → spotify volume 30

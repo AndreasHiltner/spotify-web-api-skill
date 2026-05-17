@@ -23,6 +23,7 @@ metadata:
     - spotify play --all [query]
     - spotify play --playlist <name> [--device <name>]
     - spotify pause
+    - spotify skip
     - spotify next
     - spotify prev
     - spotify shuffle [on|off|toggle]
@@ -88,6 +89,7 @@ spotify seek +30         # Skip ahead 30s
 - `spotify play --playlist "name"` — Play a playlist
 - `spotify play --playlist "name" --device "Name"` — Playlist on specific device
 - `spotify pause` — Pause playback
+- `spotify skip` — Skip to next track and show what's playing
 - `spotify next` — Skip to next track
 - `spotify prev` — Go to previous track
 - `spotify volume <0-100>` — Set volume percentage
@@ -167,6 +169,7 @@ export SPOTIFY_CLIENT_SECRET="your_secret"
 - "Play on Kitchen device" → `spotify play --device "Kitchen"`
 - "Play on all devices" → `spotify play --all`
 - "Skip this song" → `spotify next`
+- "Skip and show" → `spotify skip`
 - "Pause the music" → `spotify pause`
 - "Show my devices" → `spotify devices`
 - "Save the cover art" → `spotify cover --save /tmp/cover.jpg`

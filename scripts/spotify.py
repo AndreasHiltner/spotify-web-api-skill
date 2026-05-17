@@ -578,6 +578,16 @@ class SpotifyAPI:
         self._request("POST", f"/me/player/next?device_id={device_id}", allow_empty=True)
         return "⏭️ Skipped to next track"
 
+    def skip(self, device_id=None):
+        """Skip to next track and show what's now playing."""
+        result = self.next_track(device_id)
+        if result.startswith("❌"):
+            return result
+        # Brief delay for Spotify to update state
+        time.sleep(0.5)
+        now = self.now_playing_detailed()
+        return f"⏭️ {now}"
+
     def previous_track(self, device_id=None):
         devices = self.devices(raw=True)
         if not devices:
@@ -1144,6 +1154,9 @@ def main():
 
         elif cmd == "pause":
             print(api.pause())
+
+        elif cmd == "skip":
+            print(api.skip())
 
         elif cmd == "next":
             print(api.next_track())
