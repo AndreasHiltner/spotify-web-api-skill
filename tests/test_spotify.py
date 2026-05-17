@@ -444,7 +444,7 @@ class TestShuffleRepeatSeek(unittest.TestCase):
                 self.assertIn("0:30", result)
 
     def test_seek_no_device(self):
-        with patch.object(self.api, "devices", return_value=[]):
+        with patch.object(self.api, "devices", side_effect=lambda raw=False: []):
             result = self.api.seek_to("30")
             self.assertIn("No active", result)
 
@@ -529,6 +529,11 @@ class TestPlaylist(unittest.TestCase):
         self.api = _make_api()
 
     def test_playlist_search_and_play(self):
+        mock_playlist = {
+            "items": [
+                {"name": "Happy Rock", "uri": "spotify:playlist:123"}
+            ]
+        }
         mock_search = {
             "playlists": {
                 "items": [
@@ -537,11 +542,15 @@ class TestPlaylist(unittest.TestCase):
             }
         }
         with patch.object(self.api, "devices", return_value=[{"id": "dev1", "name": "Test"}]):
-            with patch.object(self.api, "_request", side_effect=[mock_search, None]) as mock_req:
+            with patch.object(self.api, "_request", side_effect=[mock_playlist, None]) as mock_req:
                 result = self.api.play_playlist("Happy Rock")
                 self.assertIn("Happy Rock", result)
-                # Two calls: search + play
+                # Two calls: /me/playlists + play
                 self.assertEqual(mock_req.call_count, 2)
+                # First call should be GET /me/playlists
+                first_call = mock_req.call_args_list[0]
+                self.assertEqual(first_call[0][0], "GET")
+                self.assertIn("/me/playlists", first_call[0][1])
                 # Second call should be PUT with context_uri
                 play_call = mock_req.call_args_list[1]
                 self.assertEqual(play_call[0][0], "PUT")

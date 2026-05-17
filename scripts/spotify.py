@@ -278,6 +278,26 @@ class SpotifyAuth:
             json.dump(cache, fh, indent=2)
         os.chmod(CACHE_FILE, 0o600)
 
+    def _resolve_device_id(self, device_name=None):
+        """Resolve device name to device_id, or use active device.
+        Callers *must* set device_id via @require_device or pass explicitly.
+        """
+        devices = self.devices(raw=True)
+        if not devices:
+            return None, None
+        
+        if device_name:
+            name_lower = device_name.lower()
+            for d in devices:
+                if d["name"].lower() == name_lower:
+                    return d["id"], d["name"]
+            return None, device_name
+        
+        active = [d for d in devices if d.get("is_active")]
+        if active:
+            return active[0]["id"], active[0]["name"]
+        return devices[0]["id"], devices[0]["name"]
+
 
 # ---------------------------------------------------------------------------
 # API Client
@@ -468,38 +488,46 @@ class SpotifyAPI:
         return "\n".join(lines)
 
     # -- playback control ------------------------------------------------------
-    def _resolve_device(self, device_name):
-        """Resolve device name to device_id from the device list."""
+    def _resolve_device_id(self, device_name=None):
+        """Resolve device name to (device_id, device_name) or (None, None)."""
         devices = self.devices(raw=True)
         if not devices:
             return None, None
-        name_lower = device_name.lower()
-        for d in devices:
-            if d["name"].lower() == name_lower:
-                return d["id"], d["name"]
-        return None, device_name
+        
+        if device_name:
+            name_lower = device_name.lower()
+            for d in devices:
+                if d["name"].lower() == name_lower:
+                    return d["id"], d["name"]
+            return None, device_name  # device_name not found
+        
+        # Default: use first active device (if any)
+        active = [d for d in devices if d.get("is_active")]
+        if active:
+            return active[0]["id"], active[0]["name"]
+        return devices[0]["id"], devices[0]["name"]
+
+
+    def _get_device_id(self, device_id=None):
+        """Get device_id from args or use first active device.
+        Returns device_id or None if no device (caller checks).
+        """
+        if device_id:
+            return device_id
+        devices = self.devices()
+        if isinstance(devices, dict) and "devices" in devices:
+            devices = devices["devices"]
+        if not devices:
+            return None
+        active = [d for d in devices if d.get("is_active")]
+        if active:
+            return active[0]["id"]
+        return devices[0]["id"]
 
     def play(self, query=None, device_name=None, context_uri=None):
-        devices = self.devices(raw=True)
-        if not devices:
+        device_id, resolved_name = self._resolve_device_id(device_name)
+        if not device_id:
             return "❌ No active Spotify devices found"
-
-        # Resolve device name → device_id
-        device_id = None
-        resolved_name = None
-        if device_name:
-            device_id, resolved_name = self._resolve_device(device_name)
-            if not device_id:
-                return f"❌ Device '{device_name}' not found. Use 'spotify devices' to list available devices."
-        else:
-            # Default: use first active device so playback targets a single device
-            active = [d for d in devices if d.get("is_active")]
-            if active:
-                device_id = active[0]["id"]
-                resolved_name = active[0]["name"]
-            else:
-                device_id = devices[0]["id"]
-                resolved_name = devices[0]["name"]
 
         if context_uri:
             self._request(
@@ -537,44 +565,28 @@ class SpotifyAPI:
                 {"uris": [track_uri]},
                 allow_empty=True,
             )
-            return (
-                f"▶️ Playing: {tracks[0]['name']} - "
-                f"{', '.join(a['name'] for a in tracks[0]['artists'])} "
-                f"on {resolved_name}"
-            )
+            return f"▶️ Playing: {tracks[0]['name']} - {', '.join(a['name'] for a in tracks[0]['artists'])} on {resolved_name}"
 
         self._request(
             "PUT", f"/me/player/play?device_id={device_id}", allow_empty=True
         )
         return f"▶️ Playback resumed on {resolved_name}"
 
-    def pause(self, device_id=None):
-        devices = self.devices(raw=True)
-        if not devices:
-            return "❌ No active Spotify devices found"
-        if not device_id:
-            active = [d for d in devices if d.get("is_active")]
-            device_id = (active[0] if active else devices[0])["id"]
 
+    def pause(self, device_id=None):
+        device_id = self._get_device_id(device_id)
+        if not device_id:
+            return "❌ No active Spotify devices found"
         try:
             self._request(
                 "PUT", f"/me/player/pause?device_id={device_id}", allow_empty=True
             )
             return "⏸️ Playback paused"
-        except Exception as exc:
-            try:
-                self._request("PUT", "/me/player/pause", allow_empty=True)
-                return "⏸️ Playback paused"
-            except Exception:
-                return f"⚠️ Pause failed: {exc}"
+        except Exception:
+            return "⚠️ Pause failed"
 
     def next_track(self, device_id=None):
-        devices = self.devices(raw=True)
-        if not devices:
-            return "❌ No active Spotify devices found"
-        if not device_id:
-            active = [d for d in devices if d.get("is_active")]
-            device_id = (active[0] if active else devices[0])["id"]
+        device_id = self._get_device_id(device_id)
         self._request("POST", f"/me/player/next?device_id={device_id}", allow_empty=True)
         return "⏭️ Skipped to next track"
 
@@ -589,12 +601,7 @@ class SpotifyAPI:
         return f"⏭️ {now}"
 
     def previous_track(self, device_id=None):
-        devices = self.devices(raw=True)
-        if not devices:
-            return "❌ No active Spotify devices found"
-        if not device_id:
-            active = [d for d in devices if d.get("is_active")]
-            device_id = (active[0] if active else devices[0])["id"]
+        device_id = self._get_device_id(device_id)
         self._request(
             "POST", f"/me/player/previous?device_id={device_id}", allow_empty=True
         )
@@ -602,12 +609,7 @@ class SpotifyAPI:
 
     # -- shuffle / repeat / seek -----------------------------------------------
     def set_shuffle(self, state, device_id=None):
-        devices = self.devices(raw=True)
-        if not devices:
-            return "❌ No active Spotify devices found"
-        if not device_id:
-            active = [d for d in devices if d.get("is_active")]
-            device_id = (active[0] if active else devices[0])["id"]
+        device_id = self._get_device_id(device_id)
 
         if isinstance(state, str) and state.lower() == "toggle":
             try:
@@ -631,12 +633,7 @@ class SpotifyAPI:
         if state not in valid:
             return f"❌ Invalid repeat state. Use: {', '.join(valid)}"
 
-        devices = self.devices(raw=True)
-        if not devices:
-            return "❌ No active Spotify devices found"
-        if not device_id:
-            active = [d for d in devices if d.get("is_active")]
-            device_id = (active[0] if active else devices[0])["id"]
+        device_id = self._get_device_id(device_id)
 
         icons = {"track": "🔂", "context": "🔁", "off": "➡️"}
         self._request(
@@ -647,12 +644,9 @@ class SpotifyAPI:
         return f"{icons[state]} Repeat {state}"
 
     def seek_to(self, position, device_id=None):
-        devices = self.devices(raw=True)
-        if not devices:
-            return "❌ No active Spotify devices found"
+        device_id = self._get_device_id(device_id)
         if not device_id:
-            active = [d for d in devices if d.get("is_active")]
-            device_id = (active[0] if active else devices[0])["id"]
+            return "❌ No active Spotify devices found"
 
         pos_str = str(position)
         if pos_str.startswith("+") or pos_str.startswith("-"):
@@ -675,13 +669,8 @@ class SpotifyAPI:
 
     # -- volume ----------------------------------------------------------------
     def set_volume(self, volume_percent, device_id=None):
+        device_id = self._get_device_id(device_id)
         devices = self.devices(raw=True)
-        if not devices:
-            return "❌ No active Spotify devices found"
-        if not device_id:
-            active = [d for d in devices if d.get("is_active")]
-            device_id = (active[0] if active else devices[0])["id"]
-
         device_name = next(
             (d["name"] for d in devices if d["id"] == device_id), "Unknown"
         )
@@ -694,34 +683,17 @@ class SpotifyAPI:
 
     # -- playlist --------------------------------------------------------------
     def play_playlist(self, playlist_query, device_name=None):
-        devices = self.devices(raw=True)
-        if not devices:
+        device_id, resolved_name = self._resolve_device_id(device_name)
+        if not device_id:
             return "❌ No active Spotify devices found"
 
-        # Resolve device name → device_id
-        device_id = None
-        resolved_name = None
-        if device_name:
-            device_id, resolved_name = self._resolve_device(device_name)
-            if not device_id:
-                return f"❌ Device '{device_name}' not found. Use 'spotify devices' to list available devices."
-        else:
-            active = [d for d in devices if d.get("is_active")]
-            if active:
-                device_id = active[0]["id"]
-                resolved_name = active[0]["name"]
-            else:
-                device_id = devices[0]["id"]
-                resolved_name = devices[0]["name"]
-
-        search = self._request(
-            "GET",
-            f"/search?q={urllib.parse.quote(playlist_query)}&type=playlist&limit=5",
-        )
-        playlists = [pl for pl in search.get("playlists", {}).get("items", []) if pl]
+        # Get user's own playlists instead of public catalog
+        user_playlists = self._request("GET", "/me/playlists?limit=50")
+        playlists = user_playlists.get("items", [])
         if not playlists:
-            return f"📭 No playlists found for '{playlist_query}'"
+            return f"📭 No playlists found in your library"
 
+        # Local match by name
         best = None
         query_lower = playlist_query.lower()
         for pl in playlists:
@@ -729,7 +701,13 @@ class SpotifyAPI:
                 best = pl
                 break
         if not best:
-            best = playlists[0]
+            # Fallback: take first playlist that contains the query
+            for pl in playlists:
+                if pl["name"].lower().find(query_lower) >= 0:
+                    best = pl
+                    break
+        if not best:
+            return f"📭 No playlists found for '{playlist_query}'"
 
         self._request(
             "PUT",
