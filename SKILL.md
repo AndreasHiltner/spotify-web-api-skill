@@ -19,7 +19,9 @@ metadata:
     - spotify lyrics
     - spotify queue [view|add uri]
     - spotify play [query]
-    - spotify play --playlist name
+    - spotify play --device <name> [query]
+    - spotify play --all [query]
+    - spotify play --playlist <name> [--device <name>]
     - spotify pause
     - spotify next
     - spotify prev
@@ -79,9 +81,12 @@ spotify seek +30         # Skip ahead 30s
 
 ### Playback Control
 
-- `spotify play` — Resume playback
+- `spotify play` — Resume playback on current active device
 - `spotify play "song name"` — Search & play specific track
+- `spotify play --device "Name"` — Play on specific device (use `spotify devices` to list)
+- `spotify play --all` — Play on all devices (group playback)
 - `spotify play --playlist "name"` — Play a playlist
+- `spotify play --playlist "name" --device "Name"` — Playlist on specific device
 - `spotify pause` — Pause playback
 - `spotify next` — Skip to next track
 - `spotify prev` — Go to previous track
@@ -121,10 +126,12 @@ Natural language commands via Kira:
 
 ```
 "Was läuft gerade?"
+"Spiel Daft Punk"
 "Spiel Daft Punk auf der Küche"
+"Spiele Playlist 'Happy Rock' auf Büro"
+"Spiel auf allen Geräten"
 "Pause die Musik"
 "Nächster Track"
-"Spiele Playlist 'Happy Rock'"
 "Stell Lautstärke auf 30%"
 "Shuffle an"
 "Repeat auf track"
@@ -158,6 +165,9 @@ export SPOTIFY_CLIENT_SECRET="***"
 - "What have I listened to lately?" → `spotify recent`
 - "What are my top tracks this month?" → `spotify top tracks short_term`
 - "Play Bohemian Rhapsody" → `spotify play "bohemian rhapsody"`
+- "Play on Kitchen device" → `spotify play --device "Küche"`
+- "Play on all devices" → `spotify play --all`
+- "Play playlist 'Rock' on Office" → `spotify play --playlist "Rock" --device "Büro"`
 - "Skip this song" → `spotify next`
 - "Pause the music" → `spotify pause`
 - "Show my devices" → `spotify devices`
@@ -183,14 +193,20 @@ Uses the Spotify Web API: https://developer.spotify.com/documentation/web-api
 - **Token expired?** Run `spotify auth` again.
 - **Redirect URI error?** Use `http://127.0.0.1:8888/callback` (not `localhost`).
 - **Rate limited?** The CLI auto-waits on 429 responses. Just retry.
+- **403 Forbidden after 502 errors?** Server errors may have corrupted the token. Delete `~/.spotify_cache.json` and run `spotify auth` again.
+- **Device not found?** Use `spotify devices` to list available device names. Names are case-insensitive.
 
 ## Changelog
 
 ### v1.2.0 (2026-05-17)
+- Device targeting: `--device "Name"` for specific devices, `--all` for group playback
 - Added shuffle, repeat, seek commands
-- Rate-limit handling (429 with Retry-After)
+- Rate-limit handling (429 with Retry-After) and 5xx server error retry
 - Unified error handling via `_request()` (DRY)
 - Debug mode (`--debug`)
+- 30s timeout on all API requests to prevent hanging
+- Auto-refresh on both 401 and 403 errors
+- All commands target active device (not first in list)
 - Album search support
 - Cover art download (`--save`)
 - Robust credential parsing in bash wrapper
