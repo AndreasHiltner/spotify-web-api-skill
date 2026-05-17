@@ -54,7 +54,7 @@ git clone https://github.com/AndreasHiltner/spotify-web-api-skill.git
 Save your credentials securely:
 
 ```bash
-# /srv/clawd-share/Andreas/Spotify.txt
+# ~/.config/spotify.txt
 Client ID
 your_client_id_here
 
