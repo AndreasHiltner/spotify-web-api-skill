@@ -8,18 +8,23 @@ CREDENTIALS_FILE="/srv/clawd-share/Andreas/Spotify.txt"
 
 # Pass through help/version flags directly
 if [[ "$1" == "--help" || "$1" == "-h" || "$1" == "--version" || "$1" == "-v" || "$1" == "help" ]]; then
-    python3 "$SCRIPT_DIR/scripts/spotify.py" "$@"
-    exit $?
+    exec python3 "$SCRIPT_DIR/scripts/spotify.py" "$@"
 fi
 
-# Load credentials
+# Load credentials from structured file
 if [ -f "$CREDENTIALS_FILE" ]; then
-    export SPOTIFY_CLIENT_ID=$(grep -A1 "Client ID" "$CREDENTIALS_FILE" | tail -1 | tr -d '[:space:]')
-    export SPOTIFY_CLIENT_SECRET=$(grep -A1 "Client Secret" "$CREDENTIALS_FILE" | tail -1 | tr -d '[:space:]')
+    # Robust parser: find key, get next non-empty line
+    export SPOTIFY_CLIENT_ID=$(awk '/^Client ID$/{getline; while($0=="")getline; print; exit}' "$CREDENTIALS_FILE" | tr -d '[:space:]')
+    export SPOTIFY_CLIENT_SECRET=$(awk '/^Client Secret$/{getline; while($0=="")getline; print; exit}' "$CREDENTIALS_FILE" | tr -d '[:space:]')
+
+    if [ -z "$SPOTIFY_CLIENT_ID" ] || [ -z "$SPOTIFY_CLIENT_SECRET" ]; then
+        echo "❌ Credentials file found but Client ID or Secret is empty: $CREDENTIALS_FILE"
+        exit 1
+    fi
 else
     echo "❌ Credentials file not found: $CREDENTIALS_FILE"
     exit 1
 fi
 
 # Run spotify.py with all arguments
-python3 "$SCRIPT_DIR/scripts/spotify.py" "$@"
+exec python3 "$SCRIPT_DIR/scripts/spotify.py" "$@"
