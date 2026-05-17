@@ -1,6 +1,6 @@
-# 🎵 Spotify Web API Skill for OpenClaw
+# 🎵 Spotify Web API CLI
 
-Control Spotify playback across all your devices (Alexa, Desktop, Mobile) directly from OpenClaw.
+Control Spotify playback across all your devices from the command line.
 
 **Version:** 1.2.0
 
@@ -20,7 +20,7 @@ Control Spotify playback across all your devices (Alexa, Desktop, Mobile) direct
 - ✅ **Progress Bar**: Visual playback progress
 - ✅ **Rate Limiting**: Automatic retry on 429 (Retry-After) and 5xx server errors
 - ✅ **Debug Mode**: `--debug` flag for request timing and status
-- ✅ **Cross-Platform**: Works on Linux, macOS, Windows (no Mac-only dependencies)
+- ✅ **Cross-Platform**: Works on Linux, macOS, Windows
 
 ## Requirements
 
@@ -36,25 +36,24 @@ Control Spotify playback across all your devices (Alexa, Desktop, Mobile) direct
 2. Log in with your Spotify Premium account
 3. Click **"Create App"**
 4. Fill in:
-   - **Name**: e.g., "OpenClaw Music Control"
+   - **Name**: e.g., "Spotify CLI"
    - **Description**: Personal music control
    - **Redirect URI**: `http://127.0.0.1:8888/callback` (⚠️ Must be loopback, not localhost!)
    - Check the box for **Spotify Web API**
 5. Save and note your **Client ID** and **Client Secret**
 
-### 2. Install the Skill
+### 2. Install
 
 ```bash
-cd /path/to/openclaw/workspace/skills
 git clone https://github.com/AndreasHiltner/spotify-web-api-skill.git
+cd spotify-web-api-skill
 ```
 
 ### 3. Store Credentials
 
-Save your credentials securely:
+Save your credentials to `~/.config/spotify.cred`:
 
-```bash
-# ~/.config/spotify.txt
+```
 Client ID
 your_client_id_here
 
@@ -62,12 +61,18 @@ Client Secret
 your_client_secret_here
 ```
 
+Or use environment variables:
+
+```bash
+export SPOTIFY_CLIENT_ID="your_id"
+export SPOTIFY_CLIENT_SECRET="your_secret"
+```
+
 ### 4. Authenticate
 
 Run the authentication flow once:
 
 ```bash
-cd skills/spotify-web-api
 ./spotify auth
 ```
 
@@ -80,10 +85,10 @@ This opens a browser window. Log in to Spotify and authorize the app. The token 
 ```bash
 spotify play                           # Resume on current active device
 spotify play "song name"               # Search & play track
-spotify play --device "Büro"           # Play on specific device
+spotify play --device "Name"           # Play on specific device
 spotify play --all                     # Play on all devices (group playback)
-spotify play --playlist "Happy Rock"   # Play playlist
-spotify play --playlist "Rock" --device "Küche"  # Playlist on specific device
+spotify play --playlist "Playlist Name" # Play playlist
+spotify play --playlist "Rock" --device "Kitchen"  # Playlist on specific device
 spotify pause                          # Pause
 spotify next                           # Next track
 spotify prev                           # Previous track
@@ -142,34 +147,35 @@ spotify --help                         # Show help message
 spotify --version                      # Show version
 ```
 
-### Discord/Telegram Integration
+## Bot/Assistant Integration
 
-Once installed, Kira can control Spotify naturally:
+This CLI integrates with any chatbot or voice assistant. Natural language commands map directly to CLI calls:
 
 ```
-"Was läuft gerade auf Spotify?"
-"Spiel Daft Punk"
-"Spiel Daft Punk auf der Küche"
-"Pause die Musik"
-"Nächster Track bitte"
-"Spiele Playlist 'Happy Rock'"
-"Stell Lautstärke auf 30%"
-"Shuffle an"
-"Repeat auf track"
-"Spul 30 Sekunden vor"
+"What's playing?"              → spotify now
+"Play Daft Punk"               → spotify play "daft punk"
+"Play Daft Punk in the Kitchen" → spotify play --device "Kitchen" "daft punk"
+"Pause the music"              → spotify pause
+"Next track"                   → spotify next
+"Play playlist 'Happy Rock'"   → spotify play --playlist "Happy Rock"
+"Play 'Happy Rock' on Office"  → spotify play --playlist "Happy Rock" --device "Office"
+"Set volume to 30%"            → spotify volume 30
+"Shuffle on"                   → spotify shuffle on
+"Repeat this track"            → spotify repeat track
+"Skip ahead 30 seconds"        → spotify seek +30
 ```
 
 ## Project Structure
 
 ```
 spotify-web-api/
-├── SKILL.md              # OpenClaw skill definition
+├── SKILL.md              # Skill definition (for agent frameworks)
 ├── README.md             # This file
 ├── spotify               # CLI wrapper script (bash)
 ├── scripts/
 │   └── spotify.py        # Main Python script (Spotify Web API client)
 └── tests/
-    └── test_spotify.py   # Test suite (60+ tests)
+    └── test_spotify.py   # Test suite
 ```
 
 ## API Reference
@@ -201,7 +207,7 @@ The client handles errors gracefully:
 ## Troubleshooting
 
 ### "No devices found"
-Make sure you have Spotify Connect devices active (open Spotify on phone/desktop/Alexa).
+Make sure you have Spotify Connect devices active (open Spotify on phone/desktop/smart speaker).
 
 ### "401/403 Unauthorized"
 Token expired or invalid. Run `spotify auth` to re-authenticate. The client tries to auto-refresh tokens on 401 and 403 errors.
@@ -229,12 +235,11 @@ If Spotify returns 502 errors followed by 403 on subsequent requests, the token 
 - Credentials are stored locally, never uploaded
 - OAuth tokens are cached with restricted permissions (`~/.spotify_cache.json`, mode 600)
 - No data is sent to third parties
-- Token cache is encrypted on disk (chmod 600)
 
 ## Testing
 
 ```bash
-cd skills/spotify-web-api
+cd spotify-web-api-skill
 pytest tests/test_spotify.py -v
 ```
 
@@ -268,5 +273,5 @@ MIT License - See LICENSE file for details.
 
 ## Credits
 
-Built for OpenClaw by Andreas (2026)
+Built by Andreas (2026)
 Uses Spotify Web API - <https://developer.spotify.com/documentation/web-api>

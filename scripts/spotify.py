@@ -1014,7 +1014,7 @@ EXAMPLES:
 ENVIRONMENT:
     SPOTIFY_CLIENT_ID                     Your Spotify Client ID
     SPOTIFY_CLIENT_SECRET                 Your Spotify Client Secret
-    Or store in: /srv/clawd-share/Andreas/Spotify.txt
+    Or store in: ~/.config/spotify.cred
 
 REQUIREMENTS:
     - Spotify Premium account (for playback control)

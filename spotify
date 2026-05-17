@@ -4,7 +4,7 @@
 # Resolve real path (follow symlinks)
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
-CREDENTIALS_FILE="/srv/clawd-share/Andreas/Spotify.txt"
+CREDENTIALS_FILE="$HOME/.config/spotify.cred"
 
 # Pass through help/version flags directly
 if [[ "$1" == "--help" || "$1" == "-h" || "$1" == "--version" || "$1" == "-v" || "$1" == "help" ]]; then

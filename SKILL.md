@@ -48,7 +48,8 @@ metadata:
 
 ### 1. Setup Credentials
 
-Create `/srv/clawd-share/Andreas/Spotify.txt`:
+Create `~/.config/spotify.cred`:
+
 ```
 Client ID
 your_client_id_here
@@ -60,7 +61,6 @@ your_client_secret_here
 ### 2. Authenticate (One-Time)
 
 ```bash
-cd /home/andreas/clawd/.openclaw/workspace/skills/spotify-web-api
 ./spotify auth
 ```
 
@@ -120,22 +120,21 @@ spotify seek +30         # Skip ahead 30s
 
 - `spotify --debug <command>` — Enable debug output (URLs, timing, status codes)
 
-## Discord/Telegram Integration
+## Bot/Assistant Integration
 
-Natural language commands via Kira:
+Natural language commands from any assistant or chatbot:
 
 ```
-"Was läuft gerade?"
-"Spiel Daft Punk"
-"Spiel Daft Punk auf der Küche"
-"Spiele Playlist 'Happy Rock' auf Büro"
-"Spiel auf allen Geräten"
-"Pause die Musik"
-"Nächster Track"
-"Stell Lautstärke auf 30%"
-"Shuffle an"
-"Repeat auf track"
-"Spul 30 Sekunden vor"
+"What's playing?"
+"Play Daft Punk in the Kitchen"
+"Pause the music"
+"Next track"
+"Play playlist 'Happy Rock'"
+"Play 'Happy Rock' on Office"
+"Set volume to 30%"
+"Shuffle on"
+"Repeat this track"
+"Skip ahead 30 seconds"
 ```
 
 ## Requirements
@@ -156,18 +155,17 @@ Natural language commands via Kira:
 
 ```bash
 export SPOTIFY_CLIENT_ID="your_id"
-export SPOTIFY_CLIENT_SECRET="***"
+export SPOTIFY_CLIENT_SECRET="your_secret"
 ```
 
-## Example Chat Usage
+## Example Usage
 
 - "What am I listening to?" → `spotify now`
 - "What have I listened to lately?" → `spotify recent`
 - "What are my top tracks this month?" → `spotify top tracks short_term`
 - "Play Bohemian Rhapsody" → `spotify play "bohemian rhapsody"`
-- "Play on Kitchen device" → `spotify play --device "Küche"`
+- "Play on Kitchen device" → `spotify play --device "Kitchen"`
 - "Play on all devices" → `spotify play --all`
-- "Play playlist 'Rock' on Office" → `spotify play --playlist "Rock" --device "Büro"`
 - "Skip this song" → `spotify next`
 - "Pause the music" → `spotify pause`
 - "Show my devices" → `spotify devices`
@@ -189,7 +187,7 @@ Uses the Spotify Web API: https://developer.spotify.com/documentation/web-api
 
 ## Troubleshooting
 
-- **No devices found?** Open Spotify on at least one device (phone, desktop, Alexa).
+- **No devices found?** Open Spotify on at least one device (phone, desktop, smart speaker).
 - **Token expired?** Run `spotify auth` again.
 - **Redirect URI error?** Use `http://127.0.0.1:8888/callback` (not `localhost`).
 - **Rate limited?** The CLI auto-waits on 429 responses. Just retry.
