@@ -31,6 +31,7 @@ CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = "http://127.0.0.1:8888/callback"
 CACHE_FILE = Path.home() / ".spotify_cache.json"
+API_TIMEOUT = 30  # seconds — prevents hanging on unresponsive Spotify servers
 PORT = 8888
 
 # Global debug flag
@@ -117,7 +118,7 @@ class SpotifyAuth:
             },
         )
 
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, timeout=API_TIMEOUT) as response:
             tokens = json.loads(response.read().decode())
 
         cache["access_token"] = tokens["access_token"]
@@ -156,7 +157,7 @@ class SpotifyAuth:
         )
 
         try:
-            with urllib.request.urlopen(req) as response:
+            with urllib.request.urlopen(req, timeout=API_TIMEOUT) as response:
                 tokens = json.loads(response.read().decode())
         except urllib.error.HTTPError as exc:
             raise RuntimeError(
@@ -313,7 +314,7 @@ class SpotifyAPI:
                 print(f"[debug] {method} {url}")
 
             try:
-                with urllib.request.urlopen(req) as resp:
+                with urllib.request.urlopen(req, timeout=API_TIMEOUT) as resp:
                     body = resp.read().decode()
                     if DEBUG_MODE:
                         elapsed = (time.monotonic() - _start) * 1000
@@ -349,6 +350,19 @@ class SpotifyAPI:
                     raise RuntimeError(
                         f"Rate limited after {max_retries} retries. Try again later."
                     ) from exc
+
+                # Transient server errors (502/503/504) — retry with backoff
+                if exc.code in (502, 503, 504) and attempt < max_retries:
+                    wait = min(2 ** attempt, 8)
+                    if DEBUG_MODE:
+                        print(
+                            f"[debug] Server error {exc.code}, retrying in {wait}s "
+                            f"(attempt {attempt + 1}/{max_retries})"
+                        )
+                    else:
+                        print(f"⏳ Server error {exc.code}, retrying in {wait}s…")
+                    time.sleep(wait)
+                    continue
 
                 if exc.code == 401 and not refreshed_once:
                     try:
@@ -806,7 +820,7 @@ class SpotifyAPI:
             return f"🖼️  Album Art: {url}"
 
         req = urllib.request.Request(url)
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=API_TIMEOUT) as resp:
             data = resp.read()
         out = Path(path)
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -834,7 +848,7 @@ class SpotifyAPI:
         req.add_header("Authorization", f"Bearer {token}")
 
         try:
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=API_TIMEOUT) as resp:
                 lyrics_data = json.loads(resp.read().decode())
 
             lines_data = lyrics_data.get("lyrics", {}).get("lines", [])
