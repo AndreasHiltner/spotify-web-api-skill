@@ -323,7 +323,7 @@ class TestRateLimiting(unittest.TestCase):
         """After one 429, the second attempt should succeed."""
         call_count = 0
 
-        def mock_urlopen(req):
+        def mock_urlopen(req, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -344,7 +344,7 @@ class TestRateLimiting(unittest.TestCase):
 
     def test_429_exhaust_retries(self):
         """After 3 retries of 429, should raise RuntimeError."""
-        def mock_urlopen(req):
+        def mock_urlopen(req, **kwargs):
             raise _make_http_error(429, {"Retry-After": "0"})
 
         with patch("urllib.request.urlopen", side_effect=mock_urlopen), \
@@ -365,7 +365,7 @@ class TestTokenRefresh(unittest.TestCase):
         """A 401 should trigger token refresh and retry."""
         call_count = 0
 
-        def mock_urlopen(req):
+        def mock_urlopen(req, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:

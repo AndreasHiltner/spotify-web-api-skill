@@ -885,6 +885,8 @@ class SpotifyAPI:
         if not track_id:
             return f"📝 Lyrics for '{track_name}' by {artists}\n⚠️  Track ID not available"
 
+        # Note: /v1/tracks/{id}/lyrics is an undocumented/official Spotify Web API endpoint.
+        # It currently works but may change without notice. Use with caution.
         token = self.auth.get_access_token()
         req_url = f"https://api.spotify.com/v1/tracks/{track_id}/lyrics"
 

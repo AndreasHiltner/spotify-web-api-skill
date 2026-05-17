@@ -19,6 +19,10 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+# Scripts subfolder pycache
+scripts/__pycache__/
+# Backup files
+*.bak
 
 # Virtual environments
 venv/
