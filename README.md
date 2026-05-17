@@ -2,7 +2,7 @@
 
 Control Spotify playback across all your devices from the command line.
 
-**Version:** 1.2.0
+**Version:** 1.2.1
 
 ## Features
 

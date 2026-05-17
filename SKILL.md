@@ -1,6 +1,6 @@
 ---
 name: spotify-web-api
-version: 1.2.0
+version: 1.2.1
 description: Control Spotify playback via Web API - play, pause, skip, search, playlists, devices, shuffle, repeat, seek. Cross-platform (Linux/macOS/Windows).
 homepage: https://spotify.com
 author: Andreas

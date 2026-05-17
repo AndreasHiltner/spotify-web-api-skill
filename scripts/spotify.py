@@ -22,7 +22,7 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Version (single source of truth)
 # ---------------------------------------------------------------------------
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -585,6 +585,10 @@ class SpotifyAPI:
         except Exception:
             return "⚠️ Pause failed"
 
+    def stop(self, device_id=None):
+        """Stop playback (alias for pause via Spotify API)."""
+        return self.pause(device_id)
+
     def next_track(self, device_id=None):
         device_id = self._get_device_id(device_id)
         self._request("POST", f"/me/player/next?device_id={device_id}", allow_empty=True)
@@ -1134,6 +1138,9 @@ def main():
 
         elif cmd == "pause":
             print(api.pause())
+
+        elif cmd == "stop":
+            print(api.stop())
 
         elif cmd == "skip":
             print(api.skip())
