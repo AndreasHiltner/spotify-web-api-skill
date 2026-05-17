@@ -50,8 +50,8 @@ Save your credentials securely:
 
 ```bash
 # Option A: In a credentials file (recommended)
-echo "Client ID: YOUR_CLIENT_ID" > /srv/clawd-share/Andreas/Spotify.txt
-echo "Client Secret: YOUR_CLIENT_SECRET" >> /srv/clawd-share/Andreas/Spotify.txt
+echo "Client ID: YOUR_CLIENT_ID" > ~/.config/spotify.txt
+echo "Client Secret: YOUR_CLIENT_SECRET" >> ~/.config/spotify.txt
 
 # Option B: As environment variables
 export SPOTIFY_CLIENT_ID="your_client_id"
