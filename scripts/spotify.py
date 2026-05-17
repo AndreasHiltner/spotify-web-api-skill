@@ -364,7 +364,7 @@ class SpotifyAPI:
                     time.sleep(wait)
                     continue
 
-                if exc.code == 401 and not refreshed_once:
+                if exc.code in (401, 403) and not refreshed_once:
                     try:
                         token = self.auth.refresh_token()
                         refreshed_once = True
@@ -468,18 +468,38 @@ class SpotifyAPI:
         return "\n".join(lines)
 
     # -- playback control ------------------------------------------------------
-    def play(self, query=None, device_id=None, context_uri=None):
+    def _resolve_device(self, device_name):
+        """Resolve device name to device_id from the device list."""
+        devices = self.devices(raw=True)
+        if not devices:
+            return None, None
+        name_lower = device_name.lower()
+        for d in devices:
+            if d["name"].lower() == name_lower:
+                return d["id"], d["name"]
+        return None, device_name
+
+    def play(self, query=None, device_name=None, context_uri=None):
         devices = self.devices(raw=True)
         if not devices:
             return "❌ No active Spotify devices found"
 
-        if not device_id:
+        # Resolve device name → device_id
+        device_id = None
+        resolved_name = None
+        if device_name:
+            device_id, resolved_name = self._resolve_device(device_name)
+            if not device_id:
+                return f"❌ Device '{device_name}' not found. Use 'spotify devices' to list available devices."
+        else:
+            # Default: use first active device so playback targets a single device
             active = [d for d in devices if d.get("is_active")]
-            device_id = (active[0] if active else devices[0])["id"]
-
-        device_name = next(
-            (d["name"] for d in devices if d["id"] == device_id), "Unknown"
-        )
+            if active:
+                device_id = active[0]["id"]
+                resolved_name = active[0]["name"]
+            else:
+                device_id = devices[0]["id"]
+                resolved_name = devices[0]["name"]
 
         if context_uri:
             self._request(
@@ -489,7 +509,7 @@ class SpotifyAPI:
                 allow_empty=True,
             )
             uri_type = context_uri.split(":")[1] if ":" in context_uri else "content"
-            return f"▶️ Playing {uri_type} on {device_name}"
+            return f"▶️ Playing {uri_type} on {resolved_name}"
 
         if query:
             if query.startswith("spotify:"):
@@ -500,7 +520,7 @@ class SpotifyAPI:
                     allow_empty=True,
                 )
                 uri_type = query.split(":")[1] if ":" in query else "content"
-                return f"▶️ Playing {uri_type} on {device_name}"
+                return f"▶️ Playing {uri_type} on {resolved_name}"
 
             search = self._request(
                 "GET",
@@ -520,13 +540,13 @@ class SpotifyAPI:
             return (
                 f"▶️ Playing: {tracks[0]['name']} - "
                 f"{', '.join(a['name'] for a in tracks[0]['artists'])} "
-                f"on {device_name}"
+                f"on {resolved_name}"
             )
 
         self._request(
             "PUT", f"/me/player/play?device_id={device_id}", allow_empty=True
         )
-        return f"▶️ Playback resumed on {device_name}"
+        return f"▶️ Playback resumed on {resolved_name}"
 
     def pause(self, device_id=None):
         devices = self.devices(raw=True)
@@ -553,7 +573,8 @@ class SpotifyAPI:
         if not devices:
             return "❌ No active Spotify devices found"
         if not device_id:
-            device_id = devices[0]["id"]
+            active = [d for d in devices if d.get("is_active")]
+            device_id = (active[0] if active else devices[0])["id"]
         self._request("POST", f"/me/player/next?device_id={device_id}", allow_empty=True)
         return "⏭️ Skipped to next track"
 
@@ -562,7 +583,8 @@ class SpotifyAPI:
         if not devices:
             return "❌ No active Spotify devices found"
         if not device_id:
-            device_id = devices[0]["id"]
+            active = [d for d in devices if d.get("is_active")]
+            device_id = (active[0] if active else devices[0])["id"]
         self._request(
             "POST", f"/me/player/previous?device_id={device_id}", allow_empty=True
         )
@@ -574,7 +596,8 @@ class SpotifyAPI:
         if not devices:
             return "❌ No active Spotify devices found"
         if not device_id:
-            device_id = devices[0]["id"]
+            active = [d for d in devices if d.get("is_active")]
+            device_id = (active[0] if active else devices[0])["id"]
 
         if isinstance(state, str) and state.lower() == "toggle":
             try:
@@ -602,7 +625,8 @@ class SpotifyAPI:
         if not devices:
             return "❌ No active Spotify devices found"
         if not device_id:
-            device_id = devices[0]["id"]
+            active = [d for d in devices if d.get("is_active")]
+            device_id = (active[0] if active else devices[0])["id"]
 
         icons = {"track": "🔂", "context": "🔁", "off": "➡️"}
         self._request(
@@ -617,7 +641,8 @@ class SpotifyAPI:
         if not devices:
             return "❌ No active Spotify devices found"
         if not device_id:
-            device_id = devices[0]["id"]
+            active = [d for d in devices if d.get("is_active")]
+            device_id = (active[0] if active else devices[0])["id"]
 
         pos_str = str(position)
         if pos_str.startswith("+") or pos_str.startswith("-"):
@@ -658,17 +683,26 @@ class SpotifyAPI:
         return f"🔊 Volume set to {volume_percent}% on {device_name}"
 
     # -- playlist --------------------------------------------------------------
-    def play_playlist(self, playlist_query, device_id=None):
+    def play_playlist(self, playlist_query, device_name=None):
         devices = self.devices(raw=True)
         if not devices:
             return "❌ No active Spotify devices found"
-        if not device_id:
-            active = [d for d in devices if d.get("is_active")]
-            device_id = (active[0] if active else devices[0])["id"]
 
-        device_name = next(
-            (d["name"] for d in devices if d["id"] == device_id), "Unknown"
-        )
+        # Resolve device name → device_id
+        device_id = None
+        resolved_name = None
+        if device_name:
+            device_id, resolved_name = self._resolve_device(device_name)
+            if not device_id:
+                return f"❌ Device '{device_name}' not found. Use 'spotify devices' to list available devices."
+        else:
+            active = [d for d in devices if d.get("is_active")]
+            if active:
+                device_id = active[0]["id"]
+                resolved_name = active[0]["name"]
+            else:
+                device_id = devices[0]["id"]
+                resolved_name = devices[0]["name"]
 
         search = self._request(
             "GET",
@@ -927,6 +961,8 @@ COMMANDS:
 
   ▶️  Playback Control
     play [query]                 Play/resume or search & play track
+    play --device <name> [query] Play on specific device
+    play --all [query]           Play on all devices (group playback)
     play --playlist <name>       Play a playlist by name
     pause                        Pause current playback
     next                         Skip to next track
@@ -963,14 +999,17 @@ OPTIONS:
     --version, -v                Show version information
 
 EXAMPLES:
-    spotify                               # Show currently playing
-    spotify play "daft punk"              # Search & play
-    spotify play --playlist "Happy Rock"  # Play playlist
-    spotify shuffle toggle                # Toggle shuffle
-    spotify repeat track                  # Repeat current track
-    spotify seek +30                      # Skip ahead 30s
-    spotify cover --save /tmp/cover.jpg   # Save cover art
-    spotify --debug now                   # Debug mode
+    spotify                                    # Show currently playing
+    spotify play "daft punk"                   # Search & play on current device
+    spotify play --device "Büro"               # Play on device "Büro"
+    spotify play --device "Überall" "daft punk" # Play on all devices
+    spotify play --all                         # Resume on all devices (group)
+    spotify play --playlist "Happy Rock"       # Play playlist
+    spotify shuffle toggle                     # Toggle shuffle
+    spotify repeat track                       # Repeat current track
+    spotify seek +30                           # Skip ahead 30s
+    spotify cover --save /tmp/cover.jpg        # Save cover art
+    spotify --debug now                        # Debug mode
 
 ENVIRONMENT:
     SPOTIFY_CLIENT_ID                     Your Spotify Client ID
@@ -1069,15 +1108,39 @@ def main():
                 print("Unknown subtype. Use 'tracks' or 'artists'")
 
         elif cmd == "play":
-            if len(args) > 1 and args[1] == "--playlist":
-                playlist_query = " ".join(args[2:]) if len(args) > 2 else None
-                if not playlist_query:
-                    print("Usage: spotify play --playlist <playlist name>")
+            # Parse --device and --all flags
+            device_name = None
+            if "--device" in args:
+                idx = args.index("--device")
+                if idx + 1 < len(args):
+                    device_name = args[idx + 1]
+                else:
+                    print("Usage: spotify play --device <device name>")
                     return
-                print(api.play_playlist(playlist_query))
+                # Remove --device and its value from args
+                args = [a for i, a in enumerate(args) if i not in (idx, idx + 1)]
+            elif "--all" in args:
+                device_name = "Überall"
+                args = [a for a in args if a != "--all"]
+
+            if "--playlist" in args:
+                idx = args.index("--playlist")
+                playlist_args = [a for a in args if a not in ("--playlist", "--device")]
+                playlist_query = " ".join(args[idx + 1:]) if idx + 1 < len(args) else None
+                if not playlist_query:
+                    print("Usage: spotify play --playlist <playlist name> [--device <name>]")
+                    return
+                print(api.play_playlist(playlist_query, device_name=device_name))
             else:
-                query = " ".join(args[1:]) if len(args) > 1 else None
-                print(api.play(query))
+                query_args = [a for a in args if a not in ("--device", "--all")]
+                # Remove --device value if present
+                if "--device" in query_args:
+                    idx = query_args.index("--device")
+                    if idx + 1 < len(query_args):
+                        query_args.pop(idx + 1)
+                    query_args.pop(idx)
+                query = " ".join(query_args) if query_args else None
+                print(api.play(query, device_name=device_name))
 
         elif cmd == "pause":
             print(api.pause())
