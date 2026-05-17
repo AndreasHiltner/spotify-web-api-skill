@@ -514,7 +514,7 @@ class SpotifyAPI:
         """
         if device_id:
             return device_id
-        devices = self.devices()
+        devices = self.devices(raw=True)
         if isinstance(devices, dict) and "devices" in devices:
             devices = devices["devices"]
         if not devices:
