@@ -22,7 +22,7 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Version (single source of truth)
 # ---------------------------------------------------------------------------
-__version__ = "1.2.1"
+__version__ = "1.3.0"
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -130,7 +130,11 @@ class SpotifyAuth:
         return tokens
 
     def refresh_token(self):
-        """Refresh access token using refresh token"""
+        """Refresh access token using refresh token
+
+        Handles invalid_grant (expired refresh token) by clearing the cache
+        and providing an actionable re-auth message.
+        """
         cache = self._load_cache()
         refresh_tok = cache.get("refresh_token")
         if not refresh_tok:
@@ -160,6 +164,22 @@ class SpotifyAuth:
             with urllib.request.urlopen(req, timeout=API_TIMEOUT) as response:
                 tokens = json.loads(response.read().decode())
         except urllib.error.HTTPError as exc:
+            body = exc.read().decode(errors="replace") if exc.fp else ""
+            is_invalid_grant = exc.code == 400 and "invalid_grant" in body
+
+            if is_invalid_grant:
+                # Refresh token has expired (new Spotify policy from July 2026).
+                # Discard the corrupted cache and tell the user to re-auth.
+                try:
+                    CACHE_FILE.unlink(missing_ok=True)
+                except Exception:
+                    pass
+                raise RuntimeError(
+                    "🔐 Spotify refresh token has expired (6-month policy starting July 2026).\n"
+                    "   The old token has been discarded. Please re-authenticate:\n"
+                    "   spotify auth"
+                ) from exc
+
             raise RuntimeError(
                 f"Token refresh failed (HTTP {exc.code}). "
                 "Please re-authenticate: spotify auth"

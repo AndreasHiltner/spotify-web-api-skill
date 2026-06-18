@@ -2,7 +2,7 @@
 
 Control Spotify playback across all your devices from the command line.
 
-**Version:** 1.2.1
+**Version:** 1.3.0
 
 ## Features
 
@@ -248,6 +248,9 @@ pytest tests/test_spotify.py -v
 60+ tests covering formatting, search, rate limiting, token refresh, commands, and error handling.
 
 ## Changelog
+
+### v1.3.0 (2026-06-18)
+- **invalid_grant handling**: Spotify refresh tokens expire after 6 months (policy from July 2026). `refresh_token()` now detects `invalid_grant` (HTTP 400), clears the cache, and tells you to re-auth instead of crashing.
 
 ### v1.2.0 (2026-05-17)
 - **Device targeting**: `--device "Name"` for specific devices, `--all` for group playback
